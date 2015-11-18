@@ -1,8 +1,8 @@
 """I/O helper functions for pylinac."""
 
 import os.path as osp
-from tkinter import Tk
-from tkinter.filedialog import askopenfilename, askopenfilenames, askdirectory
+# from tkinter import Tk
+# from tkinter.filedialog import askopenfilename, askopenfilenames, askdirectory
 
 
 def is_valid_file(file_path, raise_error=True):

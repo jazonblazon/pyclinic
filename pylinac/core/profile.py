@@ -1,6 +1,17 @@
 """Module of objects that resemble or contain a profile, i.e. a 1 or 2-D f(x) representation."""
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import range
+from builtins import super
+from builtins import round
+from builtins import zip
+from builtins import int
+from future import standard_library
+standard_library.install_aliases()
+from builtins import object
 import copy
-from functools import lru_cache
 
 import numpy as np
 from matplotlib.patches import Circle as mpl_Circle
@@ -8,7 +19,7 @@ import matplotlib.pyplot as plt
 from scipy import ndimage
 from scipy.interpolate import interp1d
 
-from pylinac.core.decorators import value_accept
+# from pylinac.core.decorators import value_accept
 from pylinac.core.geometry import Point, Circle
 
 LEFT = 'left'
@@ -35,7 +46,7 @@ def stretch(array, min=0, max=1):
     return stretched_array
 
 
-class SingleProfile:
+class SingleProfile(object):
     """A profile that has one large signal, e.g. a radiation beam profile.
     Signal analysis methods are given, mostly based on FWXM calculations.
     Profiles with multiple peaks are better suited by the MultiProfile class.
@@ -107,7 +118,6 @@ class SingleProfile:
         return grounded_values
 
     @property
-    @lru_cache()
     def _initial_peak_idx(self):
         """The initial peak index."""
         x_idx = self._get_initial_peak(self._passed_initial_peak)
@@ -146,8 +156,6 @@ class SingleProfile:
 
         return initial_peak
 
-    @value_accept(side=(LEFT, RIGHT), kind=(VALUE, INDEX))
-    @lru_cache()
     def _penumbra_point(self, side='left', x=50, interpolate=False, kind='index'):
         """Return the index of the given penumbra. Search starts at the peak and moves index-by-index
         outward until the penumbra value is hit.
@@ -206,7 +214,6 @@ class SingleProfile:
             return peak
 
     @property
-    @lru_cache()
     def _values_left_interp(self):
         """Interpolated values of the "left side" profile data."""
         ydata_f = interp1d(self._indices, self._values_left, kind=self.interpolation_type)
@@ -214,7 +221,6 @@ class SingleProfile:
         return y_data
 
     @property
-    @lru_cache()
     def _values_right_interp(self):
         """Interpolated values of the "right side" profile data."""
         ydata_f = interp1d(self._indices, self._values_right, kind=self.interpolation_type)
@@ -222,7 +228,6 @@ class SingleProfile:
         return y_data
 
     @property
-    @lru_cache()
     def _values_interp(self):
         """Interpolated values of the entire profile array."""
         ydata_f = interp1d(self._indices, self.values, kind=self.interpolation_type)
@@ -275,7 +280,6 @@ class SingleProfile:
         else:
             return fwxmcen
 
-    @value_accept(side=(LEFT, RIGHT, BOTH), lower=(0, 100), upper=(0, 100))
     def penumbra_width(self, side='left', lower=20, upper=80, interpolate=False):
         """Return the penumbra width of the profile.
 
@@ -318,7 +322,6 @@ class SingleProfile:
 
         return pen
 
-    @value_accept(field_width=(0, 1))
     def field_values(self, field_width=0.8):
         """Return a subarray of the values of the profile for the given field width.
         This is helpful for doing, e.g., flatness or symmetry calculations, where you
@@ -337,7 +340,6 @@ class SingleProfile:
         field_values = self.values[left:right]
         return field_values
 
-    @value_accept(field_width=(0, 1))
     def field_edges(self, field_width=0.8):
         """Return the indices of the field width edges, based on the FWHM.
 
@@ -355,7 +357,6 @@ class SingleProfile:
         right = round(fwhmc + field_width / 2)
         return left, right
 
-    @value_accept(field_width=(0, 1), calculation=('mean', 'median', 'max', 'min', 'area'))
     def field_calculation(self, field_width=0.8, calculation='mean'):
         """Perform an operation on the field values of the profile.
         This function is useful for determining field symmetry and flatness.
@@ -394,7 +395,6 @@ class SingleProfile:
         plt.plot(self.values)
         plt.show()
 
-    @value_accept(kind=('median', 'gaussian'))
     def filter(self, size=0.05, kind='median'):
         """Filter the profile with a median or gaussian filter.
 
@@ -448,7 +448,7 @@ class SingleProfile:
         self.values = stretch(self.values, min=min, max=max)
 
 
-class MultiProfile:
+class MultiProfile(object):
     """A class for analyzing 1-D profiles that contain multiple signals. Methods are mostly for *finding & filtering*
     the signals, peaks, valleys, etc. Profiles with a single peak (e.g. radiation beam profiles) are better suited by the SingleProfile class.
 
@@ -473,7 +473,6 @@ class MultiProfile:
         self.peaks = []
         self.valleys = []
 
-    @value_accept(kind=('median', 'gaussian'))
     def filter(self, size=0.05, kind='median'):
         """Filter the profile.
 
@@ -527,7 +526,6 @@ class MultiProfile:
             peaks_y = [peak.value for peak in self.peaks]
             ax.plot(peaks_x, peaks_y, 'go')
 
-    @value_accept(kind=(INDEX, VALUE))
     def find_peaks(self, threshold=0.3, min_distance=0.05, max_number=None, search_region=(0.0, 1.0), kind='index'):
         """Find the peaks of the profile using a simple maximum value search. This also sets the `peaks` attribute.
 
@@ -584,7 +582,6 @@ class MultiProfile:
 
         return valley_idxs if kind == INDEX else valley_vals
 
-    @value_accept(x=(0, 100))
     def find_fwxm_peaks(self, x=50, threshold=0.3, min_distance=0.05, max_number=None, search_region=(0.0, 1.0),
                         kind='index', interpolate=False, interpolation_factor=100, interpolation_type='linear'):
         """Find peaks using the center of the FWXM (rather than by max value).
@@ -743,20 +740,20 @@ class CircleProfile(MultiProfile, Circle):
 
     def find_peaks(self, threshold=0.3, min_distance=0.05, max_number=None, search_region=(0.0, 1.0), kind='index'):
         """Overloads Profile to also map peak locations to the image."""
-        array = super().find_peaks(threshold, min_distance, max_number, search_region, kind)
+        array = super(CircleProfile, self).find_peaks(threshold, min_distance, max_number, search_region, kind)
         self._map_peaks()
         return array
 
     def find_valleys(self, threshold=0.3, min_distance=0.05, max_number=None, search_region=(0.0, 1.0), kind='index'):
         """Overload Profile to also map valley locations to the image."""
-        array = super().find_valleys(threshold, min_distance, max_number, search_region, kind)
+        array = super(CircleProfile, self).find_valleys(threshold, min_distance, max_number, search_region, kind)
         self._map_peaks()
         return array
 
     def find_fwxm_peaks(self, x=50, threshold=0.3, min_distance=0.05, max_number=None, search_region=(0.0, 1.0), kind='index',
                         interpolate=False, interpolation_factor=100, interpolation_type='linear'):
         """Overloads Profile to also map the peak locations to the image."""
-        array = super().find_fwxm_peaks(x, threshold, min_distance, max_number, interpolate=interpolate,
+        array = super(CircleProfile, self).find_fwxm_peaks(x, threshold, min_distance, max_number, interpolate=interpolate,
                                         search_region=search_region, kind=kind, interpolation_type=interpolation_type,
                                         interpolation_factor=interpolation_factor)
         self._map_peaks()
@@ -812,7 +809,6 @@ class CollapsedCircleProfile(CircleProfile):
     """A circular profile that samples a thick band around the nominal circle, rather than just a 1-pixel-wide profile
     to give a mean value.
     """
-    @value_accept(width_ratio=(0, 1))
     def __init__(self, center, radius, image_array, start_angle=0, ccw=True, sampling_ratio=1.0, width_ratio=0.1, num_profiles=20):
         """
         Parameters
@@ -829,7 +825,7 @@ class CollapsedCircleProfile(CircleProfile):
         """
         self.width_ratio = width_ratio
         self.num_profiles = num_profiles
-        super().__init__(center, radius, image_array, start_angle, ccw, sampling_ratio)
+        super(CollapsedCircleProfile, self).__init__(center, radius, image_array, start_angle, ccw, sampling_ratio)
 
     @property
     def _radii(self):

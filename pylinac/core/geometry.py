@@ -1,6 +1,18 @@
 
 """Module for classes that represent common geometric objects or patterns."""
-from itertools import zip_longest
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import int
+from builtins import round
+from future import standard_library
+from future.moves.itertools import zip_longest
+
+
+standard_library.install_aliases()
+from builtins import object
+# from itertools import zip_longest
 import math
 
 import numpy as np
@@ -22,7 +34,7 @@ def sin(degrees):
     return math.sin(math.radians(degrees))
 
 
-class Vector:
+class Vector(object):
     """A vector with x, y, and z coordinates."""
     def __init__(self, x=0, y=0, z=0):
         self.x = x
@@ -59,7 +71,7 @@ def vector_is_close(vector1, vector2, delta=0.1):
     return True
 
 
-class Point:
+class Point(object):
     """A geometric point with x, y, and z coordinates/attributes."""
     _attr_list = ['x', 'y', 'z', 'idx', 'value']
     _coord_list = ['x', 'y', 'z']
@@ -153,7 +165,7 @@ class Point:
         return self
 
 
-class Circle:
+class Circle(object):
     """A geometric circle with center Point, radius, and diameter."""
 
     def __init__(self, center_point=None, radius=None):
@@ -195,7 +207,7 @@ class Circle:
         axes.add_patch(mpl_Circle((self.center.x, self.center.y), edgecolor=edgecolor, radius=self.radius, fill=fill))
 
 
-class Line:
+class Line(object):
     """A line that is represented by two points or by m*x+b.
 
     Notes
@@ -286,7 +298,7 @@ class Line:
         axes.plot((self.point1.x, self.point2.x), (self.point1.y, self.point2.y), linewidth=width, color=color)
 
 
-class Rectangle:
+class Rectangle(object):
     """A rectangle with width, height, center Point, top-left corner Point, and bottom-left corner Point."""
 
     def __init__(self, width, height, center, as_int=False):

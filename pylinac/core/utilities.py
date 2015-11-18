@@ -1,7 +1,8 @@
 """Utility functions for pylinac."""
 import decimal
 import inspect
-from io import BytesIO
+# from io import BytesIO
+# from io import
 import os.path as osp
 from collections import Iterable
 import zipfile

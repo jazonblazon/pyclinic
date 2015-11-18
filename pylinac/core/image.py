@@ -1,5 +1,14 @@
 
 """This module holds classes for image loading and manipulation."""
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import super
+from builtins import int
+from future import standard_library
+standard_library.install_aliases()
+from builtins import object
 from io import BytesIO
 import os.path as osp
 import os
@@ -13,7 +22,7 @@ from PIL import Image as pImage
 from scipy import ndimage
 from scipy.misc import imresize
 
-from pylinac.core.decorators import type_accept, value_accept
+# from pylinac.core.decorators import type_accept, value_accept
 from pylinac.core.geometry import Point
 from pylinac.core.profile import stretch as stretcharray
 from pylinac.core.utilities import typed_property
@@ -25,13 +34,13 @@ IMAGE = 'Image'
 MM_PER_INCH = 25.4
 
 
-class DICOMStack:
+class DICOMStack(object):
     """A class that loads and holds a stack of DICOM images (e.g. a CT dataset). The class can take
     a folder or zip file and read any and all DICOM images. The images must all be the same size."""
     metadata = None
     array = None
 
-    def __init__(self, folder=None, dtype=int):
+    def __init__(self, folder=None, dtype=np.int):
         if folder is not None:
             self._instantiate(data=folder, dtype=dtype)
 
@@ -57,7 +66,7 @@ class DICOMStack:
                     pass
             if filelist:
                 return filelist
-        raise FileNotFoundError("No CT images were found within the specified folder.")
+        raise LookupError("No CT images were found within the specified folder.")
 
     def _get_ct_images_metadata_from_zip(self, zfile):
         """Get the CT image file names from a zip file."""
@@ -72,7 +81,7 @@ class DICOMStack:
                 pass
         if filelist:
             return filelist
-        raise FileNotFoundError("No CT images were found within the specified folder.")
+        raise LookupError("No CT images were found within the specified folder.")
 
     def _check_all_from_same_study(self, metadatalist):
         initial_uid = metadatalist[0].SeriesInstanceUID
@@ -96,13 +105,13 @@ class DICOMStack:
         self.array += int(self.metadata.RescaleIntercept)
 
     @classmethod
-    def from_zip(cls, zip_path, dtype=int):
+    def from_zip(cls, zip_path, dtype=np.int):
         if isinstance(zip_path, zipfile.ZipFile):
             zfiles = zip_path
         elif zipfile.is_zipfile(zip_path):
             zfiles = zipfile.ZipFile(zip_path)
         else:
-            raise FileExistsError("File given was not a valid zip file")
+            raise ValueError("File given was not a valid zip file")
 
         obj = cls()
         obj._instantiate(data=zfiles, dtype=dtype, is_zip=True)
@@ -121,7 +130,7 @@ class DICOMStack:
         return self.array.shape
 
 
-class Image:
+class Image(object):
     """A swiss-army knife, delegate class for loading in images and image-like things.
 
     The class should not be instantiated directly, but through its class methods. These methods
@@ -206,7 +215,6 @@ class Image:
         return isinstance(obj, np.ndarray)
 
     @classmethod
-    @value_accept(method=('mean', 'max', 'sum'))
     def load_multiples(cls, image_file_list, method='mean', stretch=True):
         """Combine multiple image files into one superimposed image.
 
@@ -238,7 +246,7 @@ class Image:
         return first_img
 
 
-class BaseImage:
+class BaseImage(object):
     """Base class for the Image classes.
 
     Attributes
@@ -254,7 +262,7 @@ class BaseImage:
         if isinstance(path, BytesIO):
             path.seek(0)
         elif not osp.isfile(path):
-            raise FileExistsError("File `{}` does not exist".format(path))
+            raise LookupError("File `{}` does not exist".format(path))
         else:
             self.filename = path
 
@@ -288,7 +296,6 @@ class BaseImage:
                 raise ValueError("If size is a float, it must be <1.0")
         self.array = ndimage.median_filter(self.array, size=size, mode=mode)
 
-    @type_accept(pixels=int)
     def remove_edges(self, pixels=15):
         """Removes pixels on all edges of the image.
 
@@ -348,7 +355,6 @@ class BaseImage:
         array = np.where(self.array >= threshold, 1, 0)
         return ArrayImage(array)
 
-    @type_accept(point=(Point, tuple))
     def dist2edge_min(self, point):
         """Calculates minimum distance from given point to image edges.
 
@@ -434,7 +440,7 @@ class DicomImage(BaseImage):
         path : str, file-object
             The path to the file or the data stream.
         """
-        super().__init__(path)
+        super(DicomImage, self).__init__(path)
         self.dicom_dataset = dicom.read_file(path, force=True)
         self.array = self.dicom_dataset.pixel_array
 
@@ -487,7 +493,15 @@ class FileImage(BaseImage):
         The SID value as passed in upon construction.
     """
 
-    def __init__(self, path, *, dpi=None, sid=1000):
+    def __init__(self, path, **_3to2kwargs):
+        if 'sid' in _3to2kwargs:
+            sid = _3to2kwargs['sid']; del _3to2kwargs['sid']
+        else:
+            sid = 1000
+        if 'dpi' in _3to2kwargs:
+            dpi = _3to2kwargs['dpi']; del _3to2kwargs['dpi']
+        else:
+            dpi = None
         """
         Parameters
         ----------
@@ -501,7 +515,7 @@ class FileImage(BaseImage):
         sid : int, float
             The Source-to-Image distance in mm.
         """
-        super().__init__(path)
+        super(FileImage, self).__init__(path)
         pil_image = pImage.open(path)
         # convert to gray if need be
         if pil_image.mode not in ('F', 'L', '1'):
@@ -536,7 +550,11 @@ class FileImage(BaseImage):
 class ArrayImage(BaseImage):
     """An image constructed solely from a numpy array."""
 
-    def __init__(self, array, *, dpi=None, sid=1000):
+    def __init__(self, array, **_3to2kwargs):
+        if 'sid' in _3to2kwargs: sid = _3to2kwargs['sid']; del _3to2kwargs['sid']
+        else: sid = 1000
+        if 'dpi' in _3to2kwargs: dpi = _3to2kwargs['dpi']; del _3to2kwargs['dpi']
+        else: dpi = None
         self.array = array
         self._dpi = dpi
         self.sid = sid

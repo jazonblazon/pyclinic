@@ -13,10 +13,24 @@ Features:
 * **Any scan protocol** - Scan your CatPhan 504 with any Varian protocol; or even scan it in a regular CT scanner.
   Any field size or field extent is allowed.
 """
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import absolute_import
+from builtins import super
+from builtins import round
+from builtins import range
+from builtins import zip
+from builtins import int
+from future import standard_library
+standard_library.install_aliases()
+from builtins import object
 from abc import abstractmethod
 from collections import OrderedDict
-import copy
-from functools import lru_cache
+try:
+    from functools import lru_cache
+except ImportError:
+    from pylinac.core.decorators import lru_cache
 from io import BytesIO
 from os import path as osp
 import zipfile
@@ -25,7 +39,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import ndimage
 
-from pylinac.core.decorators import value_accept
+# from pylinac.core.decorators import value_accept
 from pylinac.core.geometry import Point, Circle, sector_mask, Line, Rectangle
 from pylinac.core.image import Image, DICOMStack
 from pylinac.core.io import get_folder_UI, get_filepath_UI
@@ -35,7 +49,7 @@ from pylinac.core.utilities import simple_round, import_mpld3, get_url
 np.seterr(invalid='ignore')  # ignore warnings for invalid numpy operations. Used for np.where() operations on partially-NaN arrays.
 
 
-class CBCT:
+class CBCT(object):
     """A class for loading and analyzing CT DICOM files of a CatPhan 504. Can be from a CBCT or CT scanner
     Analyzes: Uniformity (CTP486), High-Contrast Spatial Resolution (CTP528), Image Scaling & HU Linearity (CTP404).
 
@@ -145,7 +159,7 @@ class CBCT:
         FileNotFoundError : If no CT images are found in the folder
         """
         if not osp.isdir(folder):
-            raise NotADirectoryError("Path given was not a Directory/Folder")
+            raise LookupError("Path given was not a Directory/Folder")
         self.dicom_stack = DICOMStack(folder)
         self.settings = Settings(self.dicom_stack)
 
@@ -460,7 +474,7 @@ class CBCT:
         return False if self.settings is None else True
 
 
-class Settings:
+class Settings(object):
     """Data structure for retaining certain settings and information regarding the CBCT algorithm and image data.
     This class is initialized during the CBCT image loading.
 
@@ -611,7 +625,7 @@ class RectangleROI(Rectangle):
         y_shift = -np.sin(np.deg2rad(angle)) * dist_from_center
         x_shift = np.cos(np.deg2rad(angle)) * dist_from_center
         center = Point(phantom_center.x + x_shift, phantom_center.y + y_shift)
-        super().__init__(width, height, center, as_int=True)
+        super(RectangleROI, self).__init__(width, height, center, as_int=True)
         self._array = array
 
     @property
@@ -638,7 +652,7 @@ class DiskROI(Circle):
             The location of the phantom center.
         """
         center = self._get_shifted_center(angle, dist_from_center, phantom_center)
-        super().__init__(center_point=center, radius=roi_radius)
+        super(DiskROI, self).__init__(center_point=center, radius=roi_radius)
         self._array = array
 
     def _get_shifted_center(self, angle, dist_from_center, phantom_center):
@@ -679,7 +693,7 @@ class HUDiskROI(DiskROI):
         tolerance : int
             The roi pixel value tolerance.
         """
-        super().__init__(array, angle, roi_radius, dist_from_center, phantom_center)
+        super(HUDiskROI, self).__init__(array, angle, roi_radius, dist_from_center, phantom_center)
         self.nominal_val = nominal_value
         self.tolerance = tolerance
 
@@ -708,7 +722,7 @@ class LowContrastDiskROI(DiskROI):
         contrast_threshold : float, int
             The threshold for considering a bubble to be "seen".
         """
-        super().__init__(array, angle, roi_radius, dist_from_center, phantom_center)
+        super(LowContrastDiskROI, self).__init__(array, angle, roi_radius, dist_from_center, phantom_center)
         self.contrast_threshold = contrast_threshold
 
     @property
@@ -757,7 +771,7 @@ class ThicknessROI(RectangleROI):
         return 'blue'
 
 
-class ROIManagerMixin:
+class ROIManagerMixin(object):
     """Class for handling multiple ROIs. Used for the HU linearity, Uniformity, Geometry, Low-contrast, and Thickness slices.
 
     Attributes
@@ -805,7 +819,7 @@ class ROIManagerMixin:
             roi.add_to_axes(axis, edgecolor=roi.plot_color)
 
 
-class Slice:
+class Slice(object):
     """Base class for analyzing specific slices of a CBCT dicom set."""
     def __init__(self, dicom_stack, settings, slice_num=None, combine=True, combine_method='mean', num_slices=1):
         """
@@ -887,7 +901,7 @@ class HUSlice(Slice, ROIManagerMixin):
     roi_nominal_angles = [90, 120, 180, -120, -60, 0, 60]
 
     def __init__(self, dicom_stack, settings):
-        super().__init__(dicom_stack, settings)
+        super(HUSlice, self).__init__(dicom_stack, settings)
         self._setup_rois()
 
     def _setup_rois(self):
@@ -953,7 +967,7 @@ class UniformitySlice(Slice, ROIManagerMixin):
     roi_nominal_angles = [-90, 0, 90, 180, 0]
 
     def __init__(self, dicom_stack, settings):
-        super().__init__(dicom_stack, settings)
+        super(UniformitySlice, self).__init__(dicom_stack, settings)
         self._setup_rois()
 
     def _setup_rois(self):
@@ -1021,7 +1035,7 @@ class LowContrastSlice(Slice, ROIManagerMixin):
     roi_nominal_angles = [110, 89, 68.6, 52.4, 37.6, 26.6, 12.9, -10]
 
     def __init__(self, dicom_stack, settings):
-        super().__init__(dicom_stack, settings)
+        super(LowContrastSlice, self).__init__(dicom_stack, settings)
         self._setup_rois()
 
     def _setup_rois(self):
@@ -1034,8 +1048,8 @@ class LowContrastSlice(Slice, ROIManagerMixin):
             else:
                 self.bg_rois[name] = LowContrastDiskROI(self.image, angle, radius, self.dist2rois,
                                                         self.phan_center, self.settings.contrast_threshold)
-        for roi in self.rois.values():
-            roi.background = np.mean([roi.pixel_value for roi in self.bg_rois.values()])
+        for key, roi in self.rois.items():
+            self.rois[key].background = np.mean([roi.pixel_value for roi in self.bg_rois.values()])
 
     @property
     def tolerance(self):
@@ -1057,7 +1071,7 @@ class LowContrastSlice(Slice, ROIManagerMixin):
 
     def plot_rois(self, axis):
         """Plot the ROIs to an axis."""
-        super().plot_rois(axis)
+        super(LowContrastSlice, self).plot_rois(axis)
         for roi in self.bg_rois.values():
             roi.add_to_axes(axis, 'blue')
 
@@ -1093,7 +1107,7 @@ class SpatialResolutionSlice(Slice):
     line_pair_cutoff = 0.34
 
     def __init__(self, *args, **kwargs):
-        super().__init__(combine_method='max', *args, **kwargs)
+        super(SpatialResolutionSlice, self).__init__(combine_method='max', *args, **kwargs)
 
     @property
     def slice_num(self):
@@ -1142,7 +1156,7 @@ class SpatialResolutionSlice(Slice):
         in peak spacing as those of the larger areas.
         """
         line_cutoff = int(self.line_pair_cutoff * len(self.circle_profile.values))
-        spacing_array = np.linspace(1, 12, num=line_cutoff, dtype=int)
+        spacing_array = np.linspace(1, 12, num=line_cutoff, dtype=np.int)
         spaced_array = np.repeat(self.circle_profile.values[:line_cutoff], spacing_array)
         profile = MultiProfile(spaced_array)
         profile.ground()
@@ -1280,7 +1294,7 @@ class ThicknessSlice(Slice, ROIManagerMixin):
     dist2rois_mm = 38
 
     def __init__(self, dicom_stack, settings):
-        super().__init__(dicom_stack, settings)
+        super(ThicknessSlice, self).__init__(dicom_stack, settings)
         self._setup_rois()
 
     def _setup_rois(self):
@@ -1389,7 +1403,7 @@ class GeometricLine(Line):
         tolerance : int, float
             The tolerance of the geometric line, in mm.
         """
-        super().__init__(geo_roi1.node_center, geo_roi2.node_center)
+        super(GeometricLine, self).__init__(geo_roi1.node_center, geo_roi2.node_center)
         self.mm_per_pixel = mm_per_pixel
         self.tolerance = tolerance
 
@@ -1435,7 +1449,7 @@ class GeometrySlice(Slice, ROIManagerMixin):
     roi_nominal_angles = [-135, -45, 45, 135]
 
     def __init__(self, dicom_stack, settings):
-        super().__init__(dicom_stack, settings)
+        super(GeometrySlice, self).__init__(dicom_stack, settings)
         # apply a filter to reduce salt & pepper noise around nodes
         self.image.median_filter(size=3)
         self._setup_rois()
@@ -1491,7 +1505,6 @@ def get_filled_area_ratio(array):
     filled_area = np.sum(array)
     return filled_area/box_area
 
-@value_accept(mode=('mean','median','max'))
 def combine_surrounding_slices(slice_array, nominal_slice_num, slices_plusminus=1, mode='mean'):
     """Return an array that is the combination of a given slice and a number of slices surrounding it.
 
